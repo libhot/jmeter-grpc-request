@@ -53,7 +53,7 @@ public class GRPCSamplerGui extends AbstractSamplerGui {
     private JTextField libFolderField;
     private JButton libBrowseButton;
 
-    private JComboBox<String> fullMethodField;
+    private JTextField fullMethodField;
     private JButton fullMethodButton;
 
     private JTextField metadataField;
@@ -104,7 +104,7 @@ public class GRPCSamplerGui extends AbstractSamplerGui {
         grpcSampler.setMetadata(this.metadataField.getText());
         grpcSampler.setHost(this.hostField.getText());
         grpcSampler.setPort(this.portField.getText());
-        grpcSampler.setFullMethod(this.fullMethodField.getSelectedItem().toString());
+        grpcSampler.setFullMethod(this.fullMethodField.getText());
         grpcSampler.setDeadline(this.deadlineField.getText());
         grpcSampler.setTls(this.isTLSCheckBox.isSelected());
         grpcSampler.setTlsDisableVerification(this.isTLSDisableVerificationCheckBox.isSelected());
@@ -126,7 +126,7 @@ public class GRPCSamplerGui extends AbstractSamplerGui {
         metadataField.setText(grpcSampler.getMetadata());
         hostField.setText(grpcSampler.getHost());
         portField.setText(grpcSampler.getPort());
-        fullMethodField.setSelectedItem(grpcSampler.getFullMethod());
+        fullMethodField.setText(grpcSampler.getFullMethod());
         deadlineField.setText(grpcSampler.getDeadline());
         isTLSCheckBox.setSelected(grpcSampler.isTls());
         isTLSDisableVerificationCheckBox.setSelected(grpcSampler.isTlsDisableVerification());
@@ -151,7 +151,7 @@ public class GRPCSamplerGui extends AbstractSamplerGui {
         metadataField.setText("");
         hostField.setText("");
         portField.setText("");
-        fullMethodField.setSelectedItem("");
+        fullMethodField.setText("");
         deadlineField.setText("1000");
         isTLSCheckBox.setSelected(false);
         isTLSDisableVerificationCheckBox.setSelected(false);
@@ -316,16 +316,16 @@ public class GRPCSamplerGui extends AbstractSamplerGui {
         // Full method
         addToPanel(
                 requestPanel, labelConstraints, 0, row, new JLabel("Full Method: ", JLabel.RIGHT));
-        addToPanel(requestPanel, editConstraints, 1, row, fullMethodField = new JComboBox<>());
+        addToPanel(requestPanel, editConstraints, 1, row, fullMethodField = new JTextField());
         fullMethodField.setEditable(true);
-        fullMethodField.setMaximumRowCount(12);
+        //fullMethodField.setMaximumRowCount(12);
         addToPanel(
                 requestPanel,
                 labelConstraints,
                 2,
                 row,
                 fullMethodButton = new JButton("Listing..."));
-
+        fullMethodButton.setEnabled(false);
         // fullMethodButton click listener
         registerListGRPCMethodListener();
 
@@ -342,8 +342,8 @@ public class GRPCSamplerGui extends AbstractSamplerGui {
     private void reloadProtoMethods(boolean reload) {
         getProtoMethods(reload);
         String item = getFullMethodName();
-        fullMethodField.setSelectedItem(item);
-        fullMethodField.showPopup();
+        //fullMethodField.setSelectedItem(item);
+        //fullMethodField.showPopup();
     }
 
     private String[] getProtoMethods(boolean reload) {
@@ -356,7 +356,7 @@ public class GRPCSamplerGui extends AbstractSamplerGui {
             protoMethods = new String[methodList.size()];
             methodList.toArray(protoMethods);
             Arrays.sort(protoMethods);
-            fullMethodField.setModel(new DefaultComboBoxModel<>(protoMethods));
+            //fullMethodField.setModel(new DefaultComboBoxModel<>(protoMethods));
             log.info("Full Methods Length: {}", protoMethods.length);
             return protoMethods;
         } catch (Exception e) {
@@ -478,7 +478,7 @@ public class GRPCSamplerGui extends AbstractSamplerGui {
     }
 
     private String getFullMethodName() {
-        Object methodName = fullMethodField.getSelectedItem();
+        Object methodName = fullMethodField.getText();
         if (methodName == null) return "";
         return methodName.toString();
     }
@@ -486,7 +486,7 @@ public class GRPCSamplerGui extends AbstractSamplerGui {
     private void registerListGRPCMethodListener() {
         registerListGRPCMethods();
         registerGenerateGRPCRequestMockData();
-        registerAutoCompleteListGRPCMethods();
+        //registerAutoCompleteListGRPCMethods();
     }
 
     private void registerListGRPCMethods() {
@@ -505,53 +505,53 @@ public class GRPCSamplerGui extends AbstractSamplerGui {
     }
 
     private void registerGenerateGRPCRequestMockData() {
-        fullMethodField.addPopupMenuListener(
-                new PopupMenuListener() {
-                    @Override
-                    public void popupMenuWillBecomeVisible(PopupMenuEvent e) {}
-
-                    // fullMethod list checked listener
-                    @Override
-                    public void popupMenuWillBecomeInvisible(PopupMenuEvent e) {
-                        // Request Mock Auto Create
-                        generateGRPCRequestMockData();
-                    }
-
-                    @Override
-                    public void popupMenuCanceled(PopupMenuEvent e) {}
-                });
+//        fullMethodField.addPopupMenuListener(
+//                new PopupMenuListener() {
+//                    @Override
+//                    public void popupMenuWillBecomeVisible(PopupMenuEvent e) {}
+//
+//                    // fullMethod list checked listener
+//                    @Override
+//                    public void popupMenuWillBecomeInvisible(PopupMenuEvent e) {
+//                        // Request Mock Auto Create
+//                        generateGRPCRequestMockData();
+//                    }
+//
+//                    @Override
+//                    public void popupMenuCanceled(PopupMenuEvent e) {}
+//                });
     }
 
     private void registerAutoCompleteListGRPCMethods() {
         // fullMethod edit enter listener
-        fullMethodField.addActionListener(
-                e -> {
-                    if ("comboBoxEdited".equals(e.getActionCommand())) {
-                        // fullMethodField Drop - down box edit auto-complement
-                        String fullMethod = getFullMethodName();
-                        if (StringUtils.isBlank(fullMethod)) {
-                            return;
-                        }
-
-                        try {
-                            String[] protoMethods = getProtoMethods(true);
-                            for (String protoMethod : protoMethods) {
-                                boolean startsWith = protoMethod.startsWith(fullMethod);
-                                if (startsWith) {
-                                    fullMethodField.setSelectedItem(protoMethod);
-                                    if (!protoMethod.equals(fullMethod)) {
-                                        fullMethodField.showPopup();
-                                    }
-
-                                    break;
-                                }
-                            }
-                        } catch (Exception ex) {
-                            log.error("Error in reload service name {}", e);
-                        }
-                        // Request Mock Auto Create
-                        generateGRPCRequestMockData();
-                    }
-                });
+//        fullMethodField.addActionListener(
+//                e -> {
+//                    if ("comboBoxEdited".equals(e.getActionCommand())) {
+//                        // fullMethodField Drop - down box edit auto-complement
+//                        String fullMethod = getFullMethodName();
+//                        if (StringUtils.isBlank(fullMethod)) {
+//                            return;
+//                        }
+//
+//                        try {
+//                            String[] protoMethods = getProtoMethods(true);
+//                            for (String protoMethod : protoMethods) {
+//                                boolean startsWith = protoMethod.startsWith(fullMethod);
+//                                if (startsWith) {
+//                                    fullMethodField.setSelectedItem(protoMethod);
+//                                    if (!protoMethod.equals(fullMethod)) {
+//                                        fullMethodField.showPopup();
+//                                    }
+//
+//                                    break;
+//                                }
+//                            }
+//                        } catch (Exception ex) {
+//                            log.error("Error in reload service name {}", e);
+//                        }
+//                        // Request Mock Auto Create
+//                        generateGRPCRequestMockData();
+//                    }
+//                });
     }
 }
