@@ -76,6 +76,10 @@ public class GRPCSampler extends AbstractSampler implements ThreadListener, Test
                             .build();
     }
 
+    private void updateGrpcConfigRequest() {
+
+    }
+
     private void initGrpcClient() {
         if (clientCaller == null) {
             clientCaller = new ClientCaller(grpcRequestConfig);
@@ -201,7 +205,7 @@ public class GRPCSampler extends AbstractSampler implements ThreadListener, Test
     private void initGrpcInCurrentThread(SampleResult sampleResult) {
         initGrpcConfigRequest();
         initGrpcClient();
-        String grpcRequest = clientCaller.buildRequestAndMetadata(getRequestJson(), getMetadata());
+        String grpcRequest = clientCaller.buildRequestAndMetadata(getFullMethod(),getRequestJson(), getMetadata());
         sampleResult.setSamplerData(grpcRequest);
         sampleResult.setRequestHeaders(clientCaller.getMetadataString());
         sampleResult.sampleStart();
@@ -328,13 +332,13 @@ public class GRPCSampler extends AbstractSampler implements ThreadListener, Test
 
     @Override
     public void testEnded() {
-        log.info("testEnded");
+        log.info("testEnded"+getFullMethod());
         ProtocInvoker.cleanTempFolderForGeneratingProtoc();
     }
 
     @Override
     public void testEnded(String s) {
-        log.info("testEnded {}", s);
+        log.info("testEnded {}"+getFullMethod(), s);
         ProtocInvoker.cleanTempFolderForGeneratingProtoc();
     }
 }
