@@ -14,6 +14,9 @@ import io.grpc.CallOptions;
 import io.grpc.ManagedChannel;
 import io.grpc.stub.StreamObserver;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import vn.zalopay.benchmark.GRPCSampler;
 import vn.zalopay.benchmark.core.channel.ComponentObserver;
 import vn.zalopay.benchmark.core.config.GrpcRequestConfig;
 import vn.zalopay.benchmark.core.grpc.ChannelFactory;
@@ -35,6 +38,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 public class ClientCaller {
+    private static final Logger log = LoggerFactory.getLogger(ClientCaller.class);
     private Descriptors.MethodDescriptor methodDescriptor;
     private JsonFormat.TypeRegistry registry;
     private DynamicGrpcClient dynamicClient;
@@ -48,6 +52,8 @@ public class ClientCaller {
     private final GrpcRequestConfig requestConfig;
     ChannelFactory channelFactory;
 
+    private DescriptorProtos.FileDescriptorSet fileDescriptorSet;
+
     public ClientCaller(GrpcRequestConfig requestConfig) {
         this.requestConfig = requestConfig;
         this.init(
@@ -58,6 +64,10 @@ public class ClientCaller {
                 requestConfig.isTls(),
                 requestConfig.isTlsDisableVerification(),
                 requestConfig.getAwaitTerminationTimeout());
+    }
+
+    public void updateRequestConfig(GrpcRequestConfig requestConfig) {
+
     }
 
     private void init(
@@ -78,7 +88,6 @@ public class ClientCaller {
             ProtoMethodName grpcMethodName = ProtoMethodName.parseFullGrpcMethodName(fullMethod);
 
             // Fetch the appropriate file descriptors for the service.
-            final DescriptorProtos.FileDescriptorSet fileDescriptorSet;
 
             try {
                 fileDescriptorSet = ProtocInvoker.forConfig(testProtoFiles, libFolder).invoke();
@@ -88,12 +97,13 @@ public class ClientCaller {
                         "Unable to resolve service by invoking protoc: \n" + e.getMessage(), e);
             }
 
+            createDynamicClient();
+
+        if(false){
             // Set up the dynamic client and make the call.
             ServiceResolver serviceResolver =
                     ServiceResolver.fromFileDescriptorSet(fileDescriptorSet);
             methodDescriptor = serviceResolver.resolveServiceMethod(grpcMethodName);
-
-            createDynamicClient();
 
             // This collects all known types into a registry for resolution of potential "Any"
             // types.
@@ -101,6 +111,8 @@ public class ClientCaller {
                     JsonFormat.TypeRegistry.newBuilder()
                             .add(serviceResolver.listMessageTypes())
                             .build();
+        }
+
         } catch (Throwable t) {
             shutdownNettyChannel();
             throw t;
@@ -158,7 +170,7 @@ public class ClientCaller {
                         metadataMap,
                         requestConfig.getMaxInboundMessageSize(),
                         requestConfig.getMaxInboundMetadataSize());
-        dynamicClient = DynamicGrpcClient.create(methodDescriptor, channel);
+        //dynamicClient = DynamicGrpcClient.create(methodDescriptor, channel);
     }
 
     public boolean isShutdown() {
@@ -169,10 +181,23 @@ public class ClientCaller {
         return channel.isTerminated();
     }
 
-    public String buildRequestAndMetadata(String jsonData, String metadata) {
+    public String buildRequestAndMetadata(String method,String jsonData, String metadata) {
         try {
+            log.info("buildRequestAndMetadata method {}", method);
+
             metadataMap.clear();
             metadataMap.putAll(buildHashMetadata(metadata));
+            if((null !=method)&&method.length()>0) {//edgar 重新构建
+                ProtoMethodName grpcMethodName = ProtoMethodName.parseFullGrpcMethodName(method);
+                ServiceResolver serviceResolver = ServiceResolver.fromFileDescriptorSet(fileDescriptorSet);
+                methodDescriptor = serviceResolver.resolveServiceMethod(grpcMethodName);
+                registry =
+                        JsonFormat.TypeRegistry.newBuilder()
+                                .add(serviceResolver.listMessageTypes())
+                                .build();
+                dynamicClient = DynamicGrpcClient.create(methodDescriptor, channel);
+            }
+
             requestMessages =
                     Reader.create(methodDescriptor.getInputType(), jsonData, registry).read();
             return JsonFormat.printer()
@@ -184,11 +209,13 @@ public class ClientCaller {
             throw e;
         } catch (Exception e) {
             shutdownNettyChannel();
+            log.info("buildRequestAndMetadata jsonData {}", jsonData);
             throw new RuntimeException("Caught exception while parsing request for rpc", e);
         }
     }
 
     public GrpcResponse call(String deadlineMs) {
+        //log.info("call method {}", requestMessages.get(0));
         long deadline = parsingDeadlineTime(deadlineMs);
         GrpcResponse grpcResponse = new GrpcResponse();
         StreamObserver<DynamicMessage> streamObserver =
