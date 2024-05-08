@@ -14,7 +14,9 @@
 </p>
 
 [English](./README.md) | 简体中文
-
+## Bug修订
+- 支持method的参数化，并在循环中更新gRPC请求参数
+  
 ## 介绍
 他是一个功能强大的JMeter Grpc插件，可用于测试任何gRPC服务器，它不需要生成gRPC类或编译服务的protos二进制文件，只是一个非常简单的输入：
 
