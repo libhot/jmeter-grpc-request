@@ -9,7 +9,9 @@
 [![Stack Overflow](https://img.shields.io/:stack%20overflow-jmeter-brightgreen.svg)](https://stackoverflow.com/questions/tagged/jmeter)
 
 [简体中文](./README.zh-CN.md) | English
-
+## bug fixed
+- updated request in loop.
+  
 ## What is it
 
 This is a simpler of JMeter used to test for any gRPC server, it is not necessary to generate gRPC classes or to compile the protos binary for the service. Just a very simple for input:
